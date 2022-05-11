@@ -123,6 +123,36 @@ class ContactPose(object):
       wTc = mutils.pose_matrix(cam['wTc'])
       self._cTo[camera_name] = [np.linalg.inv(oTw @ wTc) for oTw in oTws]
 
+
+    # Liyuan add: joints coordinates w.r.t camera
+    self._oC = [] # 3D joint projections
+    for frame_idx in range(len(self)): #frame num
+      frame_oc = {}
+      
+      for camera_name in self.valid_cameras:
+        x = []
+        for hand_idx in range(2):
+          if hand_idx not in self._valid_hands:
+            x.append(None)
+            #print("none")
+          else:
+            #print(len(self._oX[frame_idx][hand_idx])) #21*3
+            #print(len(self._cTo[camera_name][frame_idx])) #21*3
+            #print(len((np.linalg.inv(self._cTo[camera_name][frame_idx]).T @ np.vstack((self._oX[frame_idx][hand_idx].T, np.ones(len(self._oX[frame_idx][hand_idx]))))).T[:,:3] ) )
+            # _cTo @ oX
+            #x.append(np.linalg.inv(self._cTo[camera_name][frame_idx]) @ np.vstack((self._oX[frame_idx][hand_idx].T, np.ones(len(self._oX[frame_idx][hand_idx])))).T[:,:3]  )
+            x.append((self._cTo[camera_name][frame_idx] @ np.vstack((self._oX[frame_idx][hand_idx].T, np.ones(len(self._oX[frame_idx][hand_idx]))))).T[:,:3]  )
+        frame_oc[camera_name] = tuple(x)
+      self._oC.append(frame_oc)
+    #self.oC=np.vstack((self._oX[frame_idx][hand_idx].T, np.ones(len(self._oX[frame_idx][hand_idx])))).T @ np.linalg.inv(self._cTo[camera_name])
+    #print(len(self._oC[0]["kinect2_left"][0][0])) #[frame_index][camera_name][hand_index][????????][coordinates]
+    #["kinect2_left"]
+
+
+
+
+
+
     # projections
     self._ox = []  # joint projections
     self._om = []  # marker projections
@@ -274,6 +304,22 @@ class ContactPose(object):
     P = self.K(camera_name) @ self.object_pose(camera_name, frame_idx)[:3]
     P = self.A(camera_name) @ P
     return P
+
+
+
+  def get_joints_wrt_camera(self,camera_name,frame_idx):
+    """
+    get the 3D joints coordinates w.r.t camera
+    """
+    
+    return self._oC[frame_idx][camera_name]
+
+  def get_frame_num(self):
+    '''
+    get the number of frames
+    '''
+    return len(self)
+
 
   def object_pose(self, camera_name, frame_idx):
     """
